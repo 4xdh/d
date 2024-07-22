@@ -2696,3 +2696,306 @@ function Menu:Init()
         Menu.ScreenSize = Menu.Screen.AbsoluteSize
     end)
 end
+
+getgenv().Skibidi = {
+    Enabled = false,
+    Prediction = 0.13772123,
+    Keybind = nil,
+    Resolver = false,
+
+    MenuKeybind = nil,
+
+    BoxEsp = false,
+
+
+}
+
+local ResolverVersion = "Recalculate"
+local Interval = 0.1
+
+Skibidi = getgenv().Skibidi
+
+Menu:SetSize(650, 750)
+Menu.Notify("Skibidi.lol has been injected", 5)
+Menu.Tab("Aimbot")
+Menu.Tab("Visuals")
+Menu.Tab("Settings")
+
+Menu:SetTitle("Skibidi.lol | Lite Free Build")
+Menu:SetVisible(true)
+Menu:Init()
+
+-- u can add the changing text by skidding from gamesneeze or tyrisware text changer
+
+-- also use the source for a better understanding on how to add toggles, dropdowns, keybinds and more
+
+Menu.Container("Aimbot", "Aim Assist", "Left")
+Menu.Container("Settings", "Config", "Left")
+Menu.Container("Visuals", "Esp", "Left")
+
+Menu.CheckBox("Aimbot", "Aim Assist", "Enabled", false, function(x) -- creating a toggle, replace "Main" with your tab name, and replace "Target Aimbot" with ur section name.
+    Skibidi.Enabled = x
+end)
+
+Menu.Hotkey("Aimbot", "Aim Assist", "Aimbot Keybind", false, function(x) -- making a togglekey, again replace Main and Target Aimbot with your tab and section name.
+    Skibidi.Keybind = x
+end)
+
+Menu.CheckBox("Aimbot", "Aim Assist", "Resolver", false, function(x) -- creating a toggle, replace "Main" with your tab name, and replace "Target Aimbot" with ur section name.
+    Skibidi.Resolver = x
+end)
+
+Menu.TextBox("Aimbot", "Aim Assist", "Resolver Interval", "0.1", function(x)
+    Interval = x
+end)
+
+Menu.ComboBox("Aimbot", "Aim Assist", "Resolver Version", "Recalculate", {"Recalculate", "MoveDirection"}, function(x)
+    ResolverVersion = x                                                                                                           
+end)
+
+
+Menu.TextBox("Aimbot", "Aim Assist", "Prediction", "0.13772123", function(x)
+    Skibidi.Prediction = x
+end)
+
+
+
+
+Menu.Button("Aimbot", "Aim Assist", "Bypass Camlock Anti Cheat", function(x)
+    for _, con in next, getconnections(workspace.CurrentCamera.Changed) do
+        task.wait()
+        con:Disable()
+    end
+    for _, con in next, getconnections(workspace.CurrentCamera:GetPropertyChangedSignal("CFrame")) do
+        task.wait()
+        con:Disable()
+    end
+end)
+
+Menu.Hotkey("Settings", "Config", "Menu Keybind", false, function(x) -- making a togglekey, again replace Main and Target Aimbot with your tab and section name.
+    Skibidi.MenuKeybind = x
+end)
+
+
+Menu.CheckBox("Visuals", "Esp", "Box ESP", false, function(x) -- creating a toggle, replace "Main" with your tab name, and replace "Target Aimbot" with ur section name.
+    Skibidi.BoxEsp = x
+end)
+
+
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Client = Players.LocalPlayer
+local Mouse = Client:GetMouse()
+local Camera = workspace.CurrentCamera
+
+local AimbotTarget = nil
+local AimbotVelocity = nil
+local toggle = true
+
+GetClosestToMouse = function()
+    local Target, Closest = nil, 1 / 0
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if (v.Character and v ~= Client and v.Character:FindFirstChild("HumanoidRootPart")) then
+            local Position, OnScreen = Camera:WorldToScreenPoint(v.Character.HumanoidRootPart.Position)
+            local Distance = (Vector2.new(Position.X, Position.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+
+            if (Distance and Distance < Closest and OnScreen) then
+                Closest = Distance
+                Target = v
+            end
+        end
+    end
+    return Target
+end
+
+get_calculated_velocity = function(obj, delta)
+    if obj.Character:FindFirstChild("HumanoidRootPart") then
+        local Character, RootPart = obj.Character, obj.Character:FindFirstChild("HumanoidRootPart")
+
+        local currentPosition = RootPart.Position
+        local currentTime = tick() 
+        
+        task.wait(Interval)
+
+        local newPosition = RootPart.Position
+        local newTime = tick()
+        
+        local distanceTraveled = (newPosition - currentPosition) 
+
+        local timeInterval = newTime - currentTime
+        local velocity = distanceTraveled / timeInterval
+        currentPosition = newPosition
+        currentTime = newTime
+        RootPart.Velocity = velocity
+    end
+end
+
+
+UserInputService.InputBegan:Connect(function(key, gameProcessedEvent)
+    if key.KeyCode == Skibidi.Keybind and Skibidi.Enabled == true and not gameProcessedEvent then
+        if AimbotTarget == nil then
+            AimbotTarget = GetClosestToMouse()
+        elseif AimbotTarget ~= nil then
+            AimbotTarget = nil
+        end
+    end    
+
+    if key.KeyCode == Skibidi.MenuKeybind and not gameProcessedEvent then
+        toggle = not toggle
+        Menu:SetVisible(toggle)
+    end    
+end)
+
+
+RunService.RenderStepped:Connect(function(DeltaTime)
+
+    if Skibidi.Resolver and AimbotTarget ~= nil and AimbotTarget.Character then
+        if ResolverVersion == "Recalculate" then
+            get_calculated_velocity(AimbotTarget)
+        elseif ResolverVersion == "MoveDirection" and AimbotTarget.Character:FindFirstChild("HumanoidRootPart") then
+            AimbotTarget.Character.HumanoidRootPart.Velocity = AimbotTarget.Character.Humanoid.MoveDirection * math.random(16, 17)
+        end
+    end
+
+    if AimbotTarget ~= nil and AimbotTarget.Character and AimbotTarget.Character:FindFirstChild("HumanoidRootPart") then
+        Camera.CFrame = CFrame.new(Camera.CFrame.p, AimbotTarget.Character.HumanoidRootPart.CFrame.Position
+        +AimbotTarget.Character.HumanoidRootPart.Velocity
+        *Skibidi.Prediction)
+    end
+end)    
+
+
+
+
+
+
+
+
+
+
+
+-- settings
+local settings = {
+    defaultcolor = Color3.fromRGB(255,0,0),
+    teamcheck = false,
+    teamcolor = true
+ };
+ 
+ -- services
+ local runService = game:GetService("RunService");
+ local players = game:GetService("Players");
+ 
+ -- variables
+ local localPlayer = players.LocalPlayer;
+ local camera = workspace.CurrentCamera;
+ 
+ -- functions
+ local newVector2, newColor3, newDrawing = Vector2.new, Color3.new, Drawing.new;
+ local tan, rad = math.tan, math.rad;
+ local round = function(...) local a = {}; for i,v in next, table.pack(...) do a[i] = math.round(v); end return unpack(a); end;
+ local wtvp = function(...) local a, b = camera.WorldToViewportPoint(camera, ...) return newVector2(a.X, a.Y), b, a.Z end;
+ 
+ local espCache = {};
+ local function createEsp(player)
+    local drawings = {};
+    
+    drawings.box = newDrawing("Square");
+    drawings.box.Thickness = 0.3;
+    drawings.box.Filled = false;
+    drawings.box.Color = settings.defaultcolor;
+    drawings.box.Visible = false;
+    drawings.box.ZIndex = 2;
+ 
+    drawings.boxoutline = newDrawing("Square");
+    drawings.boxoutline.Thickness = 2;
+    drawings.boxoutline.Filled = false;
+    drawings.boxoutline.Color = newColor3();
+    drawings.boxoutline.Visible = false;
+    drawings.boxoutline.ZIndex = 1;
+
+    drawings.boxinline = newDrawing("Square");
+    drawings.boxinline.Thickness = 2;
+    drawings.boxinline.Filled = false;
+    drawings.boxinline.Color = newColor3();
+    drawings.boxinline.Visible = false;
+    drawings.boxinline.ZIndex = 1;
+ 
+    espCache[player] = drawings;
+ end
+ 
+ local function removeEsp(player)
+    if rawget(espCache, player) then
+        for _, drawing in next, espCache[player] do
+            drawing:Remove();
+        end
+        espCache[player] = nil;
+    end
+ end
+ 
+local function updateEsp(player, esp)
+    local character = player and player.Character
+    if character and Skibidi.BoxEsp and character:FindFirstChild("HumanoidRootPart") then
+        local cframe = character:GetModelCFrame()
+        local position, visible, depth = wtvp(character.HumanoidRootPart.Position)
+        esp.box.Visible = visible
+        esp.boxoutline.Visible = visible
+        esp.boxinline.Visible = visible
+
+        if cframe and visible then
+            local scaleFactor = 1 / (depth * tan(rad(camera.FieldOfView / 2)) * 2) * 1000
+            local width, height = round(4 * scaleFactor, 7 * scaleFactor)
+            local x, y = round(position.X, position.Y)
+
+            esp.box.Size = newVector2(width, height)
+            esp.box.Position = newVector2(round(x - width / 2, y - height / 2))
+            esp.box.Color = settings.teamcolor and player.TeamColor.Color or settings.defaultcolor
+
+            esp.boxoutline.Size = esp.box.Size
+            esp.boxoutline.Position = esp.box.Position
+
+            -- Adjust esp.boxinline size and position properly
+            esp.boxinline.Size = esp.box.Size - newVector2(2, 2) -- Make sure to use the correct newVector2 function
+            esp.boxinline.Position = esp.box.Position + newVector2(1, 1) -- Adjust to maintain the inline position correctly
+        end
+    else
+        esp.box.Visible = false
+        esp.boxoutline.Visible = false
+        esp.boxinline.Visible = false
+    end
+end
+
+ 
+ -- main
+ for _, player in next, players:GetPlayers() do
+    if player ~= localPlayer then
+        createEsp(player);
+    end
+ end
+ 
+ players.PlayerAdded:Connect(function(player)
+    createEsp(player);
+ end);
+ 
+ players.PlayerRemoving:Connect(function(player)
+    removeEsp(player);
+ end)
+ 
+ runService:BindToRenderStep("esp", Enum.RenderPriority.Camera.Value, function()
+    for player, drawings in next, espCache do
+        if settings.teamcheck and player.Team == localPlayer.Team then
+            continue;
+        end
+ 
+        if drawings and player ~= localPlayer then
+            updateEsp(player, drawings);
+        end
+    end
+ end)
+
+ for i = 1, 3 do
+    task.wait(0.5)
+    Menu.Notify("erm what the sigma | Loaded.", 5)
+end
